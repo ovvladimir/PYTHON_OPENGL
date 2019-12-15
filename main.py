@@ -5,14 +5,14 @@ from pyglet import gl
 import math
 
 W, H = 780, 630
-BG_COLOR = (0.75, 0.75, 0.75, 1)
+BG_COLOR = (.75, .75, .75, 1.)
 
 NV = 4
 COLOR = [0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 0]  # * NV
 SIZE = 30
-SPEED_POLYGON = 1
+SPEED_POLYGON = 30
 
-SPEED_CIRCLE = 5
+SPEED_CIRCLE = 300
 RADIUS = 18
 x1, y1 = W // 2, H // 2
 keys = dict(Left=False, Right=False, Up=False, Down=False, Fire=False)
@@ -70,9 +70,9 @@ for row in level:
         x += SIZE
     y += SIZE
     x = 0
-vertex_list_length = len(polygon.vertices)
 # end QUADS
-# circle
+face_list = []
+# face
 point_list = []
 for angle in range(0, 360, 10):
     rads = math.radians(angle)
@@ -86,37 +86,59 @@ circle_list = batch.add(
     ("v2f", point_list),
     ("c4f/static", [.0, 1., .0, .5] * NP)
 )
-point_list_length = len(point_list)
-# end circle
+eyes_list = batch.add(
+    2, pyglet.gl.GL_POINTS, foreground,
+    ('v2f', [x1 - RADIUS * 0.45, y1 + RADIUS * 0.3,
+             x1 + RADIUS * 0.45, y1 + RADIUS * 0.3]),
+    ('c3B/static', (255, 0, 0, 255, 0, 0))
+)
+point2_list = []
+for angle in range(210, 340, 30):
+    rads = math.radians(angle)
+    s = RADIUS * 0.6 * math.sin(rads)
+    c = RADIUS * 0.6 * math.cos(rads)
+    point2_list.append(x1 + c)
+    point2_list.append(y1 + s)
+NM = len(point2_list) // 2
+mouth_list = batch.add(
+    NM, pyglet.gl.GL_LINE_LOOP, foreground,
+    ("v2f", point2_list),
+    ("c3f/static", [1., .0, .0] * NM)
+)
+face_list.append(circle_list)
+face_list.append(eyes_list)
+face_list.append(mouth_list)
+# end face
 
 
 def update(dt):
-    # circle
+    # face
     if keys['Left']:
-        for i1 in range(point_list_length):
-            if i1 % 2 == 0:
-                point_list[i1] -= SPEED_CIRCLE
+        for ver_list in face_list:
+            ver_list.vertices = [
+                element - SPEED_CIRCLE * dt if n % 2 == 0 else element
+                for n, element in enumerate(ver_list.vertices)]
     if keys['Right']:
-        for i2 in range(point_list_length):
-            if i2 % 2 == 0:
-                point_list[i2] += SPEED_CIRCLE
+        for ver_list in face_list:
+            ver_list.vertices = [
+                element + SPEED_CIRCLE * dt if n % 2 == 0 else element
+                for n, element in enumerate(ver_list.vertices)]
     if keys['Up']:
-        for i3 in range(point_list_length):
-            if i3 % 2 != 0:
-                point_list[i3] += SPEED_CIRCLE
+        for ver_list in face_list:
+            ver_list.vertices = [
+                element + SPEED_CIRCLE * dt if n % 2 != 0 else element
+                for n, element in enumerate(ver_list.vertices)]
     if keys['Down']:
-        for i4 in range(point_list_length):
-            if i4 % 2 != 0:
-                point_list[i4] -= SPEED_CIRCLE
-    circle_list.vertices = point_list
-    # end circle
+        for ver_list in face_list:
+            ver_list.vertices = [
+                element - SPEED_CIRCLE * dt if n % 2 != 0 else element
+                for n, element in enumerate(ver_list.vertices)]
+    # end face
     # QUADS
     for ver in polygon_list:
-        new_ver = ver.vertices[:vertex_list_length]
-        for n, _ in enumerate(new_ver):
-            if n % 2 == 0:
-                new_ver[n] -= SPEED_POLYGON
-        ver.vertices = new_ver
+        ver.vertices = [
+            elem - SPEED_POLYGON * dt if e % 2 == 0 else elem
+            for e, elem in enumerate(ver.vertices)]
     # end QUADS
 
 
