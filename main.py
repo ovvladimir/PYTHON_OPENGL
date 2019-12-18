@@ -56,6 +56,12 @@ img = pyglet.image.load('img/1.png')
 player = pyglet.sprite.Sprite(
     img, x=(W - img.width) // 2, y=(H - img.height) // 2, batch=batch)
 '''
+# text
+penalty = [0]
+penalty_label = pyglet.text.Label(
+    text=f"Penalty: {penalty[0]}", font_name='Times New Roman', color=(255, 0, 0, 255),
+    font_size=16, x=window.width, anchor_x='right', y=window.height, anchor_y='top',
+    batch=batch, group=foreground)
 # QUADS
 polygon_list = []
 x = y = 0
@@ -147,7 +153,8 @@ def update(dt):
         ny = max(obj.vertices[1], min(circle_list.vertices[1], obj.vertices[1] + SIZE))
         dtc = (nx - (circle_list.vertices[0] - RADIUS)) ** 2 + (ny - circle_list.vertices[1]) ** 2
         if dtc <= RADIUS ** 2:
-            print('collision', end=' ')
+            penalty[0] += 0.1
+            penalty_label.text = f'Penalty: {round(penalty[0], 1)}'
 
 
 @window.event
