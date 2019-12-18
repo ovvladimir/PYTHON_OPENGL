@@ -8,7 +8,7 @@ W, H = 780, 630
 BG_COLOR = (.75, .75, .75, 1.)
 
 NV = 4
-COLOR = [0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 0]  # * NV
+COLOR = (0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 0)  # * NV
 SIZE = 30
 SPEED_POLYGON = 30
 
@@ -84,7 +84,7 @@ NP = len(point_list) // 2
 circle_list = batch.add(
     NP, pyglet.gl.GL_TRIANGLE_FAN, foreground,
     ("v2f", point_list),
-    ("c4f/static", [.0, 1., .0, .5] * NP)
+    ("c4f/static", (.0, 1., .0, .5) * NP)
 )
 eyes_list = batch.add(
     2, pyglet.gl.GL_POINTS, foreground,
@@ -103,8 +103,9 @@ NM = len(point2_list) // 2
 mouth_list = batch.add(
     NM, pyglet.gl.GL_LINE_LOOP, foreground,
     ("v2f", point2_list),
-    ("c3f/static", [1., .0, .0] * NM)
+    ("c3f/static", (1., .0, .0) * NM)
 )
+
 face_list.append(circle_list)
 face_list.append(eyes_list)
 face_list.append(mouth_list)
@@ -112,7 +113,7 @@ face_list.append(mouth_list)
 
 
 def update(dt):
-    # face
+    # motion face
     if keys['Left']:
         for ver_list in face_list:
             ver_list.vertices = [
@@ -133,13 +134,20 @@ def update(dt):
             ver_list.vertices = [
                 element - SPEED_CIRCLE * dt if n % 2 != 0 else element
                 for n, element in enumerate(ver_list.vertices)]
-    # end face
-    # QUADS
+
+    # motion QUADS
     for ver in polygon_list:
         ver.vertices = [
             elem - SPEED_POLYGON * dt if e % 2 == 0 else elem
             for e, elem in enumerate(ver.vertices)]
-    # end QUADS
+
+    # collision
+    for obj_1 in polygon_list:
+        nx = max(obj_1.vertices[0], min(circle_list.vertices[0] - RADIUS, obj_1.vertices[0] + SIZE))
+        ny = max(obj_1.vertices[1], min(circle_list.vertices[1], obj_1.vertices[1] + SIZE))
+        dtc = (nx - (circle_list.vertices[0] - RADIUS)) ** 2 + (ny - circle_list.vertices[1]) ** 2
+        if dtc <= RADIUS ** 2:
+            print('collision', end=' ')
 
 
 @window.event
@@ -173,14 +181,15 @@ def on_key_release(symbol, modifiers):
         keys['Right'] = False
 
 
-# цвет окна
+# color window
 gl.glClearColor(*BG_COLOR)
-# включить прозрачность
+# enable transparency
 gl.glEnable(gl.GL_BLEND)
 gl.glBlendFunc(pyglet.gl.GL_SRC_ALPHA, pyglet.gl.GL_ONE_MINUS_SRC_ALPHA)
 
 pyglet.clock.schedule_interval(update, 1 / 60.0)
 pyglet.app.run()
+
 '''
 NV = 4
 COLOR = [255, 0, 0] * NV
