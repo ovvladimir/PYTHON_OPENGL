@@ -142,9 +142,9 @@ def update(dt):
             for e, elem in enumerate(ver.vertices)]
 
     # collision
-    for obj_1 in polygon_list:
-        nx = max(obj_1.vertices[0], min(circle_list.vertices[0] - RADIUS, obj_1.vertices[0] + SIZE))
-        ny = max(obj_1.vertices[1], min(circle_list.vertices[1], obj_1.vertices[1] + SIZE))
+    for obj in polygon_list:
+        nx = max(obj.vertices[0], min(circle_list.vertices[0] - RADIUS, obj.vertices[0] + SIZE))
+        ny = max(obj.vertices[1], min(circle_list.vertices[1], obj.vertices[1] + SIZE))
         dtc = (nx - (circle_list.vertices[0] - RADIUS)) ** 2 + (ny - circle_list.vertices[1]) ** 2
         if dtc <= RADIUS ** 2:
             print('collision', end=' ')
