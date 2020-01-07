@@ -5,7 +5,7 @@ from pyglet import gl
 import math
 
 W, H = 780, 630
-BG_COLOR = (.75, .75, .75, 1.)
+BG_COLOR = (.75, .75, .75, 1)
 
 NV = 4
 COLOR = (0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 0)  # * NV
@@ -15,7 +15,6 @@ SPEED_POLYGON = 30
 SPEED_CIRCLE = 300
 RADIUS = 18
 x1, y1 = W // 2, H // 2
-keys = dict(Left=False, Right=False, Up=False, Down=False, Fire=False)
 
 level = [
     '--------------------------',
@@ -46,6 +45,9 @@ window = pyglet.window.Window(width=W, height=H, caption='DRAW')
 window.set_location(5, 30)
 window.set_mouse_visible(visible=False)
 counter = pyglet.window.FPSDisplay(window=window)
+
+keys = key.KeyStateHandler()
+window.push_handlers(keys)
 
 # group = pyglet.graphics.Group()
 background = pyglet.graphics.OrderedGroup(0)
@@ -90,7 +92,7 @@ NP = len(point_list) // 2
 circle_list = batch.add(
     NP, pyglet.gl.GL_TRIANGLE_FAN, foreground,
     ("v2f", point_list),
-    ("c4f/static", (.0, 1., .0, .5) * NP)
+    ("c4f/static", (0, 1, 0, .5) * NP)
 )
 eyes_list = batch.add(
     2, pyglet.gl.GL_POINTS, foreground,
@@ -109,7 +111,7 @@ NM = len(point2_list) // 2
 mouth_list = batch.add(
     NM, pyglet.gl.GL_LINE_LOOP, foreground,
     ("v2f", point2_list),
-    ("c3f/static", (1., .0, .0) * NM)
+    ("c3f/static", (1, 0, 0) * NM)
 )
 
 face_list.append(circle_list)
@@ -120,22 +122,22 @@ face_list.append(mouth_list)
 
 def update(dt):
     # motion face
-    if keys['Left']:
+    if keys[key.LEFT]:
         for ver_list in face_list:
             ver_list.vertices = [
                 element - SPEED_CIRCLE * dt if n % 2 == 0 else element
                 for n, element in enumerate(ver_list.vertices)]
-    if keys['Right']:
+    if keys[key.RIGHT]:
         for ver_list in face_list:
             ver_list.vertices = [
                 element + SPEED_CIRCLE * dt if n % 2 == 0 else element
                 for n, element in enumerate(ver_list.vertices)]
-    if keys['Up']:
+    if keys[key.UP]:
         for ver_list in face_list:
             ver_list.vertices = [
                 element + SPEED_CIRCLE * dt if n % 2 != 0 else element
                 for n, element in enumerate(ver_list.vertices)]
-    if keys['Down']:
+    if keys[key.DOWN]:
         for ver_list in face_list:
             ver_list.vertices = [
                 element - SPEED_CIRCLE * dt if n % 2 != 0 else element
@@ -162,30 +164,6 @@ def on_draw():
     window.clear()
     batch.draw()
     counter.draw()
-
-
-@window.event
-def on_key_press(symbol, modifiers):
-    if symbol == key.UP:
-        keys['Up'] = True
-    if symbol == key.DOWN:
-        keys['Down'] = True
-    if symbol == key.LEFT:
-        keys['Left'] = True
-    if symbol == key.RIGHT:
-        keys['Right'] = True
-
-
-@window.event
-def on_key_release(symbol, modifiers):
-    if symbol == key.UP:
-        keys['Up'] = False
-    if symbol == key.DOWN:
-        keys['Down'] = False
-    if symbol == key.LEFT:
-        keys['Left'] = False
-    if symbol == key.RIGHT:
-        keys['Right'] = False
 
 
 # color window
