@@ -157,6 +157,9 @@ def update(dt):
         speed_polygon[0] = 0
         if face.x < W - RADIUS:
             face.x += SPEED_FACE // 10 * dt
+        else:
+            stream.stop(ignore_errors=True)
+            stream.close(ignore_errors=True)
 
 
 @window.event
