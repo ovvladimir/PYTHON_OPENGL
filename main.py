@@ -1,47 +1,52 @@
 # https://pyglet.readthedocs.io/en/stable/programming_guide/graphics.html
 import pyglet
-from pyglet.window import key
 from pyglet import gl
+from pyglet.window import key
 import math
+import sounddevice as sd
+import numpy
 
 W, H = 780, 630
 BG_COLOR = (.75, .75, .75, 1)
 
-NV = 4
-COLOR = (0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 0)  # * NV
+RED = (255, 0, 0, 255)
+GREEN = (0, 128, 0, 255)
+RADIUS = 20
 SIZE = 30
-SPEED_POLYGON = 30
+SPEED_FACE = 300
 
-SPEED_CIRCLE = 300
-RADIUS = 18
-x1, y1 = W // 2, H // 2
+speed_polygon = [30]
+face_list = [None] * 4
+list_y = [H // 2] * 20
+penalty = [0]
 
-level = [
-    '--------------------------',
-    '-                        -',
-    '-                        -',
-    '-                        -',
-    '-                        -',
-    '-                        -',
-    '-            --          -',
-    '-             --         -',
-    '-              --        -',
-    '-                        -',
-    '-                        -',
-    '-                        -',
-    '-                        -',
-    '-                        -',
-    '-                        -',
-    '-                        -',
-    '-                        -',
-    '-                        -',
-    '-                        -',
-    '-                        -',
-    '--------------------------'
+playing_field = [
+    '----------------------------------------------------------------------------------------------------------------------------------',
+    '-                           -                          --                        ---                                  -          -',
+    '-                                                      --                                                       -                -',
+    '-                                                                                                                                -',
+    '-            --                                                   -                                                              -',
+    '-                                                                                                                                -',
+    '--                                                                -                                                              -',
+    '-                                                                                   ---                                          -',
+    '-                                       --                                          ---                                     ---  -',
+    '-                                                                                                                                -',
+    '-                                                                                                                                -',
+    '-                                                                                 -                                              -',
+    '-                                                     -                                                                          -',
+    '-   --------                                          -                                                                          -',
+    '-                                                                                                                  -             -',
+    '-                                                                  --                                              -             -',
+    '-                   --                                                                                                           -',
+    '-                                                                             -                                  --              -',
+    '-                                   -          -                             -                                  ---              -',
+    '-                                   -                                       -                           -                        -',
+    '----------------------------------------------------------------------------------------------------------------------------------'
 ]
-level.reverse()
 
-window = pyglet.window.Window(width=W, height=H, caption='DRAW')
+playing_field.reverse()
+
+window = pyglet.window.Window(width=W, height=H, caption='Voice Control')
 window.set_location(5, 30)
 window.set_mouse_visible(visible=False)
 counter = pyglet.window.FPSDisplay(window=window)
@@ -59,104 +64,99 @@ player = pyglet.sprite.Sprite(
     img, x=(W - img.width) // 2, y=(H - img.height) // 2, batch=batch)
 '''
 # text
-penalty = [0]
 penalty_label = pyglet.text.Label(
-    text=f"Penalty: {penalty[0]}", font_name='Times New Roman', color=(255, 0, 0, 255),
-    font_size=16, x=window.width, anchor_x='right', y=window.height, anchor_y='top',
-    batch=batch, group=foreground)
-# QUADS
+    text=f'Штраф: {penalty[0]}', font_name='Times New Roman', color=(255, 0, 0, 255),
+    x=window.width // 2, anchor_x='center', y=window.height - SIZE, anchor_y='top',
+    font_size=16, batch=batch, group=foreground)
+
+# start QUADS
 polygon_list = []
 x = y = 0
-for row in level:
+for row in playing_field:
     for col in row:
         if col == '-':
             polygon = batch.add(
-                NV, pyglet.gl.GL_QUADS, background,
+                4, pyglet.gl.GL_QUADS, background,
                 ('v2f/stream', [x, y, x, y + SIZE, x + SIZE, y + SIZE, x + SIZE, y]),
-                ('c3f/static', COLOR))
+                ('c3f/static', (0, 0, 1, 1, 0, 1, 1, 0, 0, 0, 1, 0)))
             polygon_list.append(polygon)
         x += SIZE
     y += SIZE
     x = 0
 # end QUADS
-face_list = []
-# face
-point_list = []
-for angle in range(0, 360, 10):
-    rads = math.radians(angle)
-    s = RADIUS * math.sin(rads)
-    c = RADIUS * math.cos(rads)
-    point_list.append(x1 + c)
-    point_list.append(y1 + s)
-NP = len(point_list) // 2
-circle_list = batch.add(
-    NP, pyglet.gl.GL_TRIANGLE_FAN, foreground,
-    ("v2f", point_list),
-    ("c4f/static", (0, 1, 0, .5) * NP)
-)
-eyes_list = batch.add(
-    2, pyglet.gl.GL_POINTS, foreground,
-    ('v2f', [x1 - RADIUS * 0.45, y1 + RADIUS * 0.3,
-             x1 + RADIUS * 0.45, y1 + RADIUS * 0.3]),
-    ('c3B/static', (255, 0, 0, 255, 0, 0))
-)
-point2_list = []
-for angle in range(210, 340, 30):
-    rads = math.radians(angle)
-    s = RADIUS * 0.6 * math.sin(rads)
-    c = RADIUS * 0.6 * math.cos(rads)
-    point2_list.append(x1 + c)
-    point2_list.append(y1 + s)
-NM = len(point2_list) // 2
-mouth_list = batch.add(
-    NM, pyglet.gl.GL_LINE_LOOP, foreground,
-    ("v2f", point2_list),
-    ("c3f/static", (1, 0, 0) * NM)
-)
 
-face_list.append(circle_list)
-face_list.append(eyes_list)
-face_list.append(mouth_list)
-# end face
+
+class FaceObject(object):
+    def __init__(self, x_face, y_face, radius_face, color_face):
+        super(FaceObject, self).__init__()
+        self.x = x_face
+        self.y = y_face
+        self.radius = radius_face
+        self.color = color_face
+        self.index = 0
+
+    def update(self):
+        self.draw_face(0, 360, 6, self.x, self.y, self.radius, self.color)
+        self.draw_face(
+            0, 360, 36, self.x - self.radius * 0.42, self.y + self.radius * 0.2,
+            self.radius // 6, self.color)
+        self.draw_face(
+            0, 360, 36, self.x + self.radius * 0.42, self.y + self.radius * 0.2,
+            self.radius // 6, self.color)
+        self.draw_face(210, 340, 10, self.x, self.y, self.radius * 0.6, self.color)
+
+    def draw_face(self, a, b, c, x_elem, y_elem, radius_elem, color_elem):
+        if self.index > 3:
+            self.index = 0
+            for i in face_list:
+                i.delete()  # очищаем графику (batch)
+        point_list = []
+        for angle in range(a, b, c):
+            radian = math.radians(angle)
+            x_circle = radius_elem * math.cos(radian)
+            y_circle = radius_elem * math.sin(radian)
+            point_list.append(x_elem + x_circle)
+            point_list.append(y_elem + y_circle)
+        number_points = len(point_list) // 2
+        face_list[self.index] = batch.add(
+            number_points, pyglet.gl.GL_POINTS, foreground,
+            ('v2f/stream', point_list),
+            ('c4B/static', color_elem * number_points)
+        )
+        self.index += 1
 
 
 def update(dt):
+    face.update()
+    face.color = GREEN
     # motion face
-    if keys[key.LEFT]:
-        for ver_list in face_list:
-            ver_list.vertices = [
-                element - SPEED_CIRCLE * dt if n % 2 == 0 else element
-                for n, element in enumerate(ver_list.vertices)]
-    if keys[key.RIGHT]:
-        for ver_list in face_list:
-            ver_list.vertices = [
-                element + SPEED_CIRCLE * dt if n % 2 == 0 else element
-                for n, element in enumerate(ver_list.vertices)]
-    if keys[key.UP]:
-        for ver_list in face_list:
-            ver_list.vertices = [
-                element + SPEED_CIRCLE * dt if n % 2 != 0 else element
-                for n, element in enumerate(ver_list.vertices)]
-    if keys[key.DOWN]:
-        for ver_list in face_list:
-            ver_list.vertices = [
-                element - SPEED_CIRCLE * dt if n % 2 != 0 else element
-                for n, element in enumerate(ver_list.vertices)]
+    if keys[key.LEFT] and face.x > RADIUS:
+        face.x -= SPEED_FACE * dt
+    if keys[key.RIGHT] and face.x < W - RADIUS:
+        face.x += SPEED_FACE * dt
+    if keys[key.UP] and face.y < H - RADIUS:
+        face.y += SPEED_FACE * dt
+    if keys[key.DOWN] and face.y > RADIUS:
+        face.y -= SPEED_FACE * dt
 
-    # motion QUADS
     for ver in polygon_list:
+        # motion QUADS
         ver.vertices = [
-            elem - SPEED_POLYGON * dt if e % 2 == 0 else elem
+            elem - speed_polygon[0] * dt if e % 2 == 0 else elem
             for e, elem in enumerate(ver.vertices)]
-
-    # collision
-    for obj in polygon_list:
-        nx = max(obj.vertices[0], min(circle_list.vertices[0] - RADIUS, obj.vertices[0] + SIZE))
-        ny = max(obj.vertices[1], min(circle_list.vertices[1], obj.vertices[1] + SIZE))
-        dtc = (nx - (circle_list.vertices[0] - RADIUS)) ** 2 + (ny - circle_list.vertices[1]) ** 2
-        if dtc <= RADIUS ** 2:
+        # collision
+        nx = max(ver.vertices[0], min(face_list[0].vertices[0] - RADIUS, ver.vertices[0] + SIZE))
+        ny = max(ver.vertices[1], min(face_list[0].vertices[1], ver.vertices[1] + SIZE))
+        dtc = (nx - (face_list[0].vertices[0] - RADIUS)) ** 2 + (ny - face_list[0].vertices[1]) ** 2
+        if dtc <= RADIUS ** 2 and face_list[0].vertices[0] < W - RADIUS * 2:
             penalty[0] += 0.1
-            penalty_label.text = f'Penalty: {round(penalty[0], 1)}'
+            penalty_label.text = f'Штраф: {round(penalty[0], 1)}'
+            face.color = RED
+
+    if polygon_list[0].vertices[0] <= -W * 4:
+        speed_polygon[0] = 0
+        if face.x < W - RADIUS:
+            face.x += SPEED_FACE // 10 * dt
 
 
 @window.event
@@ -166,14 +166,32 @@ def on_draw():
     counter.draw()
 
 
-# color window
-gl.glClearColor(*BG_COLOR)
-# enable transparency
+def audio_callback(indata, frames, time, status):
+    list_y.append(numpy.linalg.norm(indata) * 20)
+    list_y.pop(0)
+    volume = int(sum(list_y) / len(list_y))
+    if face.x < W - RADIUS:
+        face.y = volume
+    if face.y > H - RADIUS:
+        face.y = H - RADIUS
+    # sd.sleep(10)
+
+
+gl.glClearColor(*BG_COLOR)  # цвет окна
+# включает прозрачность
 gl.glEnable(gl.GL_BLEND)
 gl.glBlendFunc(pyglet.gl.GL_SRC_ALPHA, pyglet.gl.GL_ONE_MINUS_SRC_ALPHA)
+gl.glPointSize(2)  # размер точек
+gl.glEnable(gl.GL_POINT_SMOOTH)  # сглаживание точек
+# gl.glLineWidth(4)
+# gl.glEnable(gl.GL_LINE_SMOOTH)
 
-pyglet.clock.schedule_interval(update, 1 / 60.0)
-pyglet.app.run()
+face = FaceObject(W // 2, H // 2, RADIUS, GREEN)
+
+stream = sd.InputStream(callback=audio_callback)
+with stream:
+    pyglet.clock.schedule_interval(update, 1 / 30.0)
+    pyglet.app.run()
 
 '''
 NV = 4
