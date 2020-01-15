@@ -128,7 +128,8 @@ class FaceObject(object):
 
 def update(dt):
     face.update()
-    face.color = GREEN
+    if face.color == RED:
+        face.color = GREEN
     # motion face
     if keys[key.LEFT] and face.x > RADIUS:
         face.x -= SPEED_FACE * dt
