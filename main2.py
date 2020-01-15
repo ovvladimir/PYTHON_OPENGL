@@ -151,6 +151,9 @@ def update(dt):
                 penalty_label.text = f'Штраф: {round(penalty[0], 1)}'
                 for obj in face_list:
                     obj.colors = [255, 0, 0, 255] * (len(obj.colors) // 4)
+    else:
+        stream.stop(ignore_errors=True)
+        stream.close(ignore_errors=True)
 
 
 @window.event
